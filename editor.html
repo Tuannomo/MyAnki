@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="user-scalable=no">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="normalize.css">
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <style>
+    #editor {
+      border: 1px solid #ccc;
+      padding: 10px;
+      min-height: 150px;
+      margin-bottom: 10px; /* Adds space between editor and buttons */
+    }
+    button {
+      margin-right: 5px; /* Optional: Adds some space between buttons */
+    }
+  </style>
+</head>
+<body>
+<div id="editor" contenteditable="true"></div>
+<script type="text/javascript" src="rich_editor.js"></script>
+<button onclick="RE.setBold()">Bold</button>
+<button onclick="RE.setItalic()">Italic</button>
+<button onclick="RE.setHighlight()">HighLight</button>
+</body>
+</html>
