@@ -1,7 +1,7 @@
 
 var RE = {
     shouldInsertPlaceholder: false,
-    cachedText: ''
+    startHighLightPos: -1
 };
 
 RE.currentSelection = {
@@ -354,6 +354,29 @@ RE.isListeningHighLightTyping = false;
 
 RE.setHighlight = function () {
     RE.shouldInsertPlaceholder = !RE.shouldInsertPlaceholder;
+
+    // Get the current selection
+    var selection = window.getSelection();
+
+    if (selection.rangeCount > 0) {
+        // Get the range of the current selection
+        var range = selection.getRangeAt(0);
+
+        // Extract the start and end positions
+        var startOffset = range.startOffset;
+        var endOffset = range.endOffset;
+
+        // You can also get the node where the cursor is positioned
+        var startContainer = range.startContainer;
+
+        // Log or use the cursor position and node as needed
+        console.log("Cursor Position - Start Offset: ", startOffset);
+        console.log("Cursor Position - End Offset: ", endOffset);
+        console.log("Cursor Position - Start Container: ", startContainer);
+
+        RE.startHighLightPos = startOffset
+    }
+
     handleTextInputAndHighLight()
 }
 
@@ -361,8 +384,6 @@ function handleTextInputAndHighLight() {
     // console.log('TUANNH RE.shouldInsertPlaceholder:', RE.shouldInsertPlaceholder)
     if (RE.shouldInsertPlaceholder) {
         var editorText = RE.editor.textContent || RE.editor.value || '';
-        RE.cachedText = editorText
-        console.log('TUANNH RE.cachedText:', RE.cachedText)
         var color = '#2C588E';
         var indexColor = '#6DA4D6';
         var number = 1; // Start number for index
@@ -370,28 +391,31 @@ function handleTextInputAndHighLight() {
 
         // Get the current selection
         var selection = document.getSelection();
-        console.log('Current selection:', selection); // Log the selection
+        // console.log('Current selection:', selection); // Log the selection
 
         if (selection.rangeCount > 0) {
             var range = selection.getRangeAt(0);
 
             selectedText = range.toString().trim(); // Get the selected text
-            console.log('selection.rangeCount:',selectedText)
+            console.log('selection.rangeCount:', selectedText)
         }
-        // console.log('Selected text:', selectedText); // Log the selected text
         if (selectedText === '') {
-            if (RE.cachedText) {
-                var startPosition = 0;
-                if (startPosition >= 0 && startPosition <= editorText.length) {
-                    // Create a new range
-                    var range = document.createRange();
+            selectedText = RE.editor.innerText
+            var startPosition = RE.startHighLightPos;
+            console.log('startPosition:', startPosition)
+            if (startPosition >= 0) {
+                // Create a new range
+                var range = document.createRange();
 
-                    // Set the start of the range based on the desired position
-                    var startNode = editor.childNodes[0]; // Assuming the text is in the first child node
+                // Set the start of the range based on the desired position
+                var startNode = editor.childNodes[0]; // Assuming the text is in the first child node
+                console.log("TUANNH startNode: ", startNode)
+
+                if(startNode && startNode.nodeType === Node.TEXT_NODE) {
                     range.setStart(startNode, startPosition);
 
                     // Set the end of the range to the end of the text content
-                    range.setEnd(startNode, editorText.length);
+                    range.setEnd(startNode, startNode.textContent.length);
 
                     // Create a span with the desired styles
                     var span = document.createElement('span');
@@ -417,22 +441,22 @@ function handleTextInputAndHighLight() {
 
                     // Extract the contents of the range and insert the span
                     var selectedText = range.extractContents();
-                    span.appendChild(selectedText);
+                    if (selectedText && selectedText.textContent.trim() !== "") {
+                        span.appendChild(selectedText);
+                        range.insertNode(span);
 
-                    // Insert the span in the range
-                    range.insertNode(span);
+                        // Collapse the range to the end of the span
+                        range.setStartAfter(span);
+                        range.collapse(true);
 
-                    // Collapse the range to the end of the span
-                    range.setStartAfter(span);
-                    range.collapse(true);
+                        // Clean up the selection
+                        var selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
 
-                    // Clean up the selection
-                    var selection = window.getSelection();
-                    selection.removeAllRanges();
-                    selection.addRange(range);
-
-                    // Focus the editor to allow typing
-                    RE.editor.focus();
+                        // Focus the editor to allow typing
+                        RE.editor.focus();
+                    }
                 }
             }
         } else {
