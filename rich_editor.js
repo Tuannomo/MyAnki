@@ -357,10 +357,12 @@ RE.setHighlight = function () {
 
     // Get the current selection
     var selection = window.getSelection();
-
+    console.log("setHighlight selection.rangeCount: ",selection.rangeCount)
     if (selection.rangeCount > 0) {
-        // Get the range of the current selection
-        var range = selection.getRangeAt(0);
+        const range = selection.getRangeAt(0);
+        const preCaretRange = range.cloneRange(); // Clone the current range to manipulate
+        preCaretRange.selectNodeContents(document.getElementById('editor')); // Select all contents of the editor
+        preCaretRange.setEnd(range.endContainer, range.endOffset); // Set the end of the range to the current cursor position
 
         // Extract the start and end positions
         var startOffset = range.startOffset;
@@ -375,6 +377,8 @@ RE.setHighlight = function () {
         console.log("Cursor Position - Start Container: ", startContainer);
 
         RE.startHighLightPos = startOffset
+
+        console.log("setHighlight startOffset: ",startOffset)
     }
 
     handleTextInputAndHighLight()
@@ -383,9 +387,8 @@ RE.setHighlight = function () {
 function handleTextInputAndHighLight() {
     // console.log('TUANNH RE.shouldInsertPlaceholder:', RE.shouldInsertPlaceholder)
     if (RE.shouldInsertPlaceholder) {
+        console.log('text selectedA.');
         var color = '#2C588E';
-        var indexColor = '#6DA4D6';
-        var number = 1; // Start number for index
         var selectedText = ''
 
         // Get the current selection
@@ -407,10 +410,11 @@ function handleTextInputAndHighLight() {
                 var range = document.createRange();
 
                 // Set the start of the range based on the desired position
-                var startNode = editor.childNodes[0]; // Assuming the text is in the first child node
+                var startNode = editor.lastChild; // Assuming the text is in the first child node
                 console.log("TUANNH startNode: ", startNode)
 
                 if(startNode && startNode.nodeType === Node.TEXT_NODE) {
+                    console.log('text selectedB.');
                     range.setStart(startNode, startPosition);
 
                     // Set the end of the range to the end of the text content
@@ -425,22 +429,10 @@ function handleTextInputAndHighLight() {
                     span.style.padding = '2px 6px';
                     span.style.lineHeight = '1';
 
-                    // Add the index
-                    var indexSpan = document.createElement('span');
-                    indexSpan.className = 'index';
-                    indexSpan.style.backgroundColor = indexColor;
-                    indexSpan.style.borderRadius = '50%';
-                    indexSpan.style.padding = '2px 6px';
-                    indexSpan.style.color = 'white';
-                    indexSpan.style.fontWeight = 'bold';
-                    indexSpan.textContent = number;
-
-                    // Wrap the selected text in the span
-                    span.appendChild(indexSpan);
-
                     // Extract the contents of the range and insert the span
                     var selectedText = range.extractContents();
                     if (selectedText && selectedText.textContent.trim() !== "") {
+                        console.log('text selectedC.');
                         span.appendChild(selectedText);
                         range.insertNode(span);
 
@@ -474,21 +466,11 @@ function handleTextInputAndHighLight() {
             span.style.borderRadius = '4px';
             span.style.padding = '2px 6px';
 
-            // Add the index
-            var indexSpan = document.createElement('span');
-            indexSpan.className = 'index';
-            indexSpan.style.backgroundColor = indexColor;
-            indexSpan.style.borderRadius = '50%';
-            indexSpan.style.padding = '2px 6px';
-            indexSpan.style.color = 'white';
-            indexSpan.style.fontWeight = 'bold';
-            indexSpan.textContent = number;
-
             // Create a text node for the selected text
             var textNode = document.createTextNode(selectedText);
 
             // Wrap the selected text with the styled span
-            span.appendChild(indexSpan);
+            // span.appendChild(indexSpan);
             span.appendChild(textNode);
 
             // Replace the selected text with the styled span
@@ -502,28 +484,30 @@ function handleTextInputAndHighLight() {
             RE.editor.focus();
         }
     } else {
+        console.log("Text selectedF");
         // Get the current selection
         var selection = window.getSelection();
-        console.log("Selection rangeCount", selection.rangeCount)
+        console.log("Selection rangeCount", selection.rangeCount);
+        
         // Check if there's any selection range
         if (selection.rangeCount > 0) {
-            console.log("TUANNH selection data: ",selection)
+            console.log("Text selectedG");
+            console.log("TUANNH selection data: ", selection);
             var range = selection.getRangeAt(0);
             // Get the parent node of the current cursor position
             var currentNode = range.commonAncestorContainer;
-
-            console.log("TUANNH currentNode data: ",currentNode)
+            console.log("TUANNH currentNode data: ", currentNode);
 
             // If the current node is a text node, get its parent element
             var parentElement = currentNode.nodeType === Node.TEXT_NODE ? currentNode.parentElement : currentNode;
 
             // Check if the cursor is inside a span with the class 'highlighted-text'
             var highlightedSpan = parentElement.closest('.highlighted-text');
+            console.log("highlightedSpan", highlightedSpan);
             
-            console.log("highlightedSpan", highlightedSpan)
             if (highlightedSpan) {
+                console.log("Text selectedH");
                 // Cursor is inside the highlighted text, move it outside of the span
-                // Get the parent of the span and insert a new text node after the span
                 var newTextNode = document.createTextNode('\u200B'); // Zero-width space to keep cursor
                 highlightedSpan.parentNode.insertBefore(newTextNode, highlightedSpan.nextSibling);
 
@@ -535,44 +519,74 @@ function handleTextInputAndHighLight() {
                 selection.removeAllRanges();
                 selection.addRange(range);
 
-                RE.editor.addEventListener('input', function() {
-                    console.log("Remove zero width")
-                    var nodes = RE.editor.childNodes;
-                    console.log("Remove zero width final nodes: ",nodes)
-                    var content = document.getElementById('editor').innerHTML;
+                // Remove the input event listener after handling the input
+                const inputHandler = function() {
+                    console.log("Handling input after moving cursor");
+                    // Remove zero-width space after typing begins
+                    var content = RE.editor.innerHTML;
                     content = content.replace(/\u200B/g, '');
-                    document.getElementById('editor').innerHTML = content;
-                    setCursorToEnd(RE.editor);
-                });
+                    RE.editor.innerHTML = content;
 
+                    // Move the cursor back to the end after content is updated
+                    setCursorToEnd(RE.editor);
+
+                    // Remove this listener to avoid repeated execution
+                    RE.editor.removeEventListener('input', inputHandler);
+                };
+
+                RE.editor.addEventListener('input', inputHandler);
                 RE.editor.focus();
             }
         }
     }
 }
 
+// This function attempts to restore the cursor position to a logical place after text changes.
+function restoreCursorPosition(editor) {
+    var selection = window.getSelection();
+    if (selection.rangeCount > 0) {
+        var range = selection.getRangeAt(0);
+        var currentNode = range.endContainer;
+
+        // Move cursor to the next valid node if it's at the end of its container
+        while (currentNode.nodeType === Node.TEXT_NODE && !currentNode.nextSibling && currentNode.parentNode) {
+            currentNode = currentNode.parentNode;
+            if (currentNode.nextSibling) {
+                var newRange = document.createRange();
+                newRange.setStartAfter(currentNode);
+                newRange.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(newRange);
+                break;
+            }
+        }
+    }
+}
+
+// Helper function to move cursor to the end of the editor
 function setCursorToEnd(element) {
-    const range = document.createRange();  // Create a range (a range is a like the selection but invisible)
-    const selection = window.getSelection(); // get the selection object (allows you to change selection)
-    range.selectNodeContents(element); // select the entire contents of the element
-    range.collapse(false); // collapse the range to the end point. false means collapse to end rather than the start
-    selection.removeAllRanges(); // remove any selections already made
-    selection.addRange(range); // make the range you have just created the visible selection
+    var range = document.createRange();
+    var selection = window.getSelection();
+    range.selectNodeContents(element);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    element.focus();
 }
 
 // Function to remove the entire highlight if the text inside is deleted
-RE.removeHighlightOnEmpty = function () {
-    var highlights = document.querySelectorAll('.highlighted-text');
-    highlights.forEach(function (highlight) {
-        var textContent = highlight.textContent.replace(highlight.querySelector('.index').textContent, '').trim();
-        if (textContent === '') {
-            highlight.remove(); // Remove the entire highlight if text is empty
-        }
-    });
-}
+// RE.removeHighlightOnEmpty = function () {
+//     var highlights = document.querySelectorAll('.highlighted-text');
+//     highlights.forEach(function (highlight) {
+//         var textContent = highlight.textContent.replace(highlight.querySelector('.index').textContent, '').trim();
+//         if (textContent === '') {
+//             highlight.remove(); // Remove the entire highlight if text is empty
+//         }
+//     });
+// }
 
 // Bind the removeHighlightOnEmpty function to the input event to handle text deletion
-RE.editor.addEventListener('input', RE.removeHighlightOnEmpty);
+// RE.editor.addEventListener('input', RE.removeHighlightOnEmpty);
 
 // Event Listeners
 // RE.editor.addEventListener("input", RE.callback);
