@@ -155,7 +155,7 @@ RE.setOutdent = function () {
 }
 
 RE.setJustifyLeft = function () {
-    // document.execCommand('justifyLeft', false, null);
+    document.execCommand('justifyLeft', false, null);
     // Get the current selection
 }
 
@@ -371,9 +371,10 @@ RE.setHighlight = function () {
         // You can also get the node where the cursor is positioned
         var startContainer = range.startContainer;
 
+        const currentNode = getCursorNode()
         // Log or use the cursor position and node as needed
         console.log("Cursor Position - Start Offset: ", startOffset);
-        console.log("Cursor Position - End Offset: ", endOffset);
+        console.log("currentNode", currentNode);
         console.log("Cursor Position - Start Container: ", startContainer);
 
         RE.startHighLightPos = startOffset
@@ -382,6 +383,18 @@ RE.setHighlight = function () {
     }
 
     handleTextInputAndHighLight()
+}
+
+function getCursorNode() {
+    const selection = window.getSelection();
+    let cursorNode = null;
+
+    if (selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        cursorNode = range.startContainer; // This is the node where the cursor is currently positioned
+    }
+
+    return cursorNode;
 }
 
 function handleTextInputAndHighLight() {
@@ -590,7 +603,12 @@ function setCursorToEnd(element) {
 
 // Event Listeners
 // RE.editor.addEventListener("input", RE.callback);
-RE.editor.addEventListener("input", function () {
+RE.editor.addEventListener("input", function (event) {
+    if (event.inputType === "deleteContentBackward" || event.inputType === "deleteContentForward") {
+        console.log('Delete event triggered.');
+        return; // Skip normal input handling
+    }
+
     console.log('Input event triggered.');
     handleTextInputAndHighLight();
 
